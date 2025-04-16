@@ -12,7 +12,10 @@ const PORT = process.env.PORT || 5002;
 
 // === Middleware ===
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://192.168.4.38:3000'],
+  origin: [
+    'http://localhost:3000',
+    'https://muscleband.onrender.com', // ✅ Allow frontend hosted on Render
+  ],
   credentials: true,
 }));
 
@@ -26,15 +29,12 @@ if (!mongoURI) {
   process.exit(1);
 }
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  process.exit(1); // Exit if DB fails to connect
-});
+mongoose.connect(mongoURI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    process.exit(1);
+  });
 
 // === Routes ===
 app.use('/api/auth', authRoutes);
@@ -45,16 +45,16 @@ app.get('/', (req, res) => {
   res.send('💡 EMG API is up and running!');
 });
 
-// === Global Error Handling Middleware ===
+// === Error Handler ===
 app.use((err, req, res, next) => {
   console.error('🚨 Uncaught Server Error:', err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong on the server.', 
-    error: err.message 
+  res.status(500).json({
+    message: 'Something went wrong on the server.',
+    error: err.message
   });
 });
 
 // === Start the Server ===
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

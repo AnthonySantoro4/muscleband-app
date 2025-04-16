@@ -7,7 +7,13 @@ import OpenScreen from './components/openscreen';
 import About from './components/about';
 import AccountInformation from './components/accountinformation';
 import ProtectedRoute from './components/ProtectedRoute';
-import PreviousTrackings from './components/PreviousTrackings'; // ✅ NEW
+import PreviousTrackings from './components/PreviousTrackings';
+
+// 👇 Add your new severity pages here
+import Safe from './components/Safe';
+import Moderate from './components/Moderate';
+import Severe from './components/Severe';
+import Dangerous from './components/Dangerous';
 
 function App() {
   return (
@@ -31,9 +37,31 @@ function App() {
             <AccountInformation />
           </ProtectedRoute>
         } />
-        <Route path="/trackings" element={  // ✅ NEW ROUTE
+        <Route path="/trackings" element={
           <ProtectedRoute>
             <PreviousTrackings />
+          </ProtectedRoute>
+        } />
+
+        {/* 🔥 New Severity Routes */}
+        <Route path="/safe" element={
+          <ProtectedRoute>
+            <Safe />
+          </ProtectedRoute>
+        } />
+        <Route path="/moderate" element={
+          <ProtectedRoute>
+            <Moderate />
+          </ProtectedRoute>
+        } />
+        <Route path="/severe" element={
+          <ProtectedRoute>
+            <Severe />
+          </ProtectedRoute>
+        } />
+        <Route path="/dangerous" element={
+          <ProtectedRoute>
+            <Dangerous />
           </ProtectedRoute>
         } />
       </Routes>

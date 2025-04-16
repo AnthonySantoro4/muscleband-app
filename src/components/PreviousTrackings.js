@@ -1,39 +1,54 @@
 import React, { useEffect, useState } from 'react';
+import TopNavBar from './TopNavBar';
 
 const PreviousTrackings = () => {
   const [history, setHistory] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 5;
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [userFirstName, setUserFirstName] = useState('User');
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user?.firstName) setUserFirstName(user.firstName);
+
     const fetchEMGHistory = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        console.log("🧪 LocalStorage User:", user);
-
         if (!user || !user._id) {
           setError("User not logged in.");
           setLoading(false);
           return;
         }
 
-        const res = await fetch(`http://192.168.4.94:5002/api/emg/fetch/${user._id}`);
-        const data = await res.json();
+        console.log("🧪 Fetching EMG history for user ID:", user._id);
 
-        if (res.ok) {
-          // ✅ Sort by newest to oldest
-          const sorted = [...data].sort(
-            (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-          );
-          setHistory(sorted);
-        } else {
-          throw new Error(data.message || 'Fetch failed');
+        let attempts = 0;
+        let res, data;
+
+        while (attempts < 3) {
+          res = await fetch(`https://muscleband.onrender.com/api/emg/fetch/${user._id}`);
+          if (res.ok) break;
+
+          console.warn(`⚠️ Attempt ${attempts + 1} failed. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second wait
+          attempts++;
         }
+
+        if (!res || !res.ok) throw new Error("Server not responding or failed to wake up");
+
+        data = await res.json();
+        setHistory(data);
       } catch (err) {
-        setError("❌ Failed to fetch EMG history.");
-        console.error("❌ Fetch Error:", err);
+        console.error("❌ Fetch EMG Error:", err);
+        setError("Failed to fetch EMG history.");
       } finally {
         setLoading(false);
       }
@@ -42,7 +57,6 @@ const PreviousTrackings = () => {
     fetchEMGHistory();
   }, []);
 
-  // Pagination Logic
   const indexOfLast = currentPage * recordsPerPage;
   const indexOfFirst = indexOfLast - recordsPerPage;
   const currentRecords = history.slice(indexOfFirst, indexOfLast);
@@ -50,6 +64,14 @@ const PreviousTrackings = () => {
 
   return (
     <div style={styles.pageContainer}>
+      <TopNavBar
+        userFirstName={userFirstName}
+        toggleMenu={toggleMenu}
+        isMenuOpen={isMenuOpen}
+        hoveredNav={hoveredNav}
+        setHoveredNav={setHoveredNav}
+      />
+
       <h2 style={styles.title}>🧠 Previous EMG Sessions</h2>
 
       {loading && <p style={styles.loading}>⏳ Loading data...</p>}
@@ -102,7 +124,6 @@ const PreviousTrackings = () => {
             </table>
           </div>
 
-          {/* Pagination Controls */}
           <div style={styles.pagination}>
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -133,20 +154,21 @@ const PreviousTrackings = () => {
 // ========== Styles ==========
 const styles = {
   pageContainer: {
-    padding: '30px',
+    padding: '120px 30px 50px',
     fontFamily: 'Segoe UI, sans-serif',
     background: 'linear-gradient(to bottom, #a1c4fd, #c2e9fb)',
     minHeight: '100vh',
+    overflowX: 'hidden',
   },
   title: {
     textAlign: 'center',
     marginBottom: '25px',
-    fontSize: '28px',
+    fontSize: '32px',
     color: '#333',
   },
   loading: {
     textAlign: 'center',
-    fontSize: '16px',
+    fontSize: '18px',
   },
   error: {
     color: 'red',
@@ -205,12 +227,14 @@ const styles = {
 
 const getSeverityStyle = (grade) => {
   switch (grade?.toLowerCase()) {
-    case 'low':
+    case 'safe':
       return { color: 'green', fontWeight: 'bold' };
     case 'moderate':
-      return { color: 'orange', fontWeight: 'bold' };
-    case 'high':
-      return { color: 'red', fontWeight: 'bold' };
+      return { color: '#FFC107', fontWeight: 'bold' };
+    case 'severe':
+      return { color: '#FF9800', fontWeight: 'bold' };
+    case 'dangerous':
+      return { color: '#F44336', fontWeight: 'bold' };
     default:
       return { color: '#333' };
   }
